@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LexiCore — Translate, beautifully</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --accent: #1a73e8;
+    --accent-soft: rgba(26,115,232,0.10);
+    --accent-glow: rgba(26,115,232,0.18);
+    --text: #1f1f1f;
+    --muted: #5f6368;
+    --faint: #9aa0a6;
+    --border: rgba(0,0,0,0.07);
+    --glass: rgba(255,255,255,0.66);
+    --glass-strong: rgba(255,255,255,0.82);
+    --glass-border: rgba(255,255,255,0.85);
+  }
+  *{ -webkit-tap-highlight-color: transparent; }
+  html,body{ height:100%; }
+  body{
+    font-family:'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    color:var(--text);
+    background:#f4f7fb;
+    overflow-x:hidden;
+    min-height:100vh;
+  }
+  /* ---------- Animated gradient background ---------- */
+  .bg-stage{ position:fixed; inset:0; z-index:-1; overflow:hidden; background:linear-gradient(135deg,#eef3fb 0%,#f7f4fb 50%,#f3f8f6 100%); }
+  .blob{ position:absolute; border-radius:50%; filter:blur(70px); opacity:.55; will-change:transform; }
+  .blob-1{ width:520px; height:520px; top:-140px; left:-120px; background:radial-gradient(circle at 30% 30%, #8ab4f8, #4285f4 60%, transparent 70%); animation:drift1 22s ease-in-out infinite alternate; }
+  .blob-2{ width:460px; height:460px; top:20%; right:-140px; background:radial-gradient(circle at 60% 40%, #fdd663, #fbbc04 55%, transparent 70%); animation:drift2 26s ease-in-out infinite alternate; }
+  .blob-3{ width:560px; height:560px; bottom:-200px; left:25%; background:radial-gradient(circle at 50% 50%, #81c995, #34a853 55%, transparent 70%); animation:drift3 30s ease-in-out infinite alternate; opacity:.45; }
+  .blob-4{ width:380px; height:380px; bottom:10%; right:15%; background:radial-gradient(circle at 50% 50%, #f28b82, #ea4335 55%, transparent 70%); animation:drift4 24s ease-in-out infinite alternate; opacity:.35; }
+  @keyframes drift1{ from{ transform:translate(0,0) scale(1);} to{ transform:translate(80px,60px) scale(1.12);} }
+  @keyframes drift2{ from{ transform:translate(0,0) scale(1.05);} to{ transform:translate(-70px,80px) scale(.95);} }
+  @keyframes drift3{ from{ transform:translate(0,0) scale(1);} to{ transform:translate(90px,-70px) scale(1.15);} }
+  @keyframes drift4{ from{ transform:translate(0,0) scale(1);} to{ transform:translate(-60px,-50px) scale(1.1);} }
+
+  /* ---------- Glass card ---------- */
+  .glass{
+    background:var(--glass);
+    backdrop-filter: blur(22px) saturate(180%);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    border:1px solid var(--glass-border);
+    box-shadow: 0 24px 60px -24px rgba(66,133,244,0.28), 0 10px 30px -12px rgba(0,0,0,0.08);
+  }
+  .glass-soft{
+    background:var(--glass-strong);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+    border:1px solid rgba(255,255,255,0.9);
+  }
+
+  /* ---------- Entrance ---------- */
+  .rise{ opacity:0; transform:translateY(18px); animation:rise .8s var(--ease-out) forwards; }
+  .rise-1{ animation-delay:.05s; } .rise-2{ animation-delay:.15s; } .rise-3{ animation-delay:.25s; }
+  @keyframes rise{ to{ opacity:1; transform:translateY(0);} }
+
+  /* ---------- Buttons ---------- */
+  .btn-icon{
+    position:relative; overflow:hidden;
+    display:inline-flex; align-items:center; justify-content:center;
+    width:38px; height:38px; border-radius:12px;
+    color:var(--muted);
+    transition: transform .25s var(--ease), background-color .25s var(--ease), color .25s var(--ease), box-shadow .25s var(--ease);
+  }
+  .btn-icon:hover{ background:var(--accent-soft); color:var(--accent); transform:translateY(-1px); box-shadow:0 6px 16px -6px var(--accent-glow); }
+  .btn-icon:active{ transform:scale(.92); }
+  .btn-icon.speaking{ color:var(--accent); background:var(--accent-soft); }
+  .btn-icon.speaking svg{ animation:pulse 1.2s var(--ease) infinite; }
+  @keyframes pulse{ 0%,100%{ transform:scale(1);} 50%{ transform:scale(1.18);} }
+
+  .ripple-span{
+    position:absolute; border-radius:50%; background:rgba(26,115,232,0.28);
+    transform:scale(0); animation:ripple .6s var(--ease-out) forwards; pointer-events:none;
+  }
+  @keyframes ripple{ to{ transform:scale(4); opacity:0; } }
+
+  /* ---------- Swap button ---------- */
+  #swapBtn{
+    width:48px; height:48px; border-radius:50%;
+    display:inline-flex; align-items:center; justify-content:center;
+    background:linear-gradient(135deg,#1a73e8,#4285f4);
+    color:#fff; flex-shrink:0;
+    box-shadow:0 10px 24px -8px rgba(26,115,232,0.55);
+    transition: transform .35s var(--ease), box-shadow .35s var(--ease), filter .35s var(--ease);
+    position:relative; overflow:hidden;
+  }
+  #swapBtn:hover{ transform:scale(1.08); box-shadow:0 14px 30px -8px rgba(26,115,232,0.65); filter:brightness(1.05); }
+  #swapBtn:active{ transform:scale(.94); }
+  #swapBtn:disabled{ filter:grayscale(.6) opacity(.5); cursor:not-allowed; box-shadow:none; }
+  @keyframes swapspin{ from{ transform:rotate(0deg);} to{ transform:rotate(360deg);} }
+  #swapBtn.spinning svg{ animation: swapspin .7s var(--ease-out); }
+
+  /* ---------- Language selector ---------- */
+  .lang-btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:10px 16px; border-radius:14px;
+    font-weight:600; font-size:15px; color:var(--text);
+    transition: background-color .25s var(--ease), color .25s var(--ease), box-shadow .25s var(--ease), transform .25s var(--ease);
+    position:relative;
+  }
+  .lang-btn:hover{ background:rgba(255,255,255,0.7); color:var(--accent); }
+  .lang-btn.active{ color:var(--accent); background:var(--accent-soft); box-shadow:inset 0 0 0 1px rgba(26,115,232,0.25); }
+  .lang-btn .chev{ transition: transform .3s var(--ease); color:var(--muted); }
+  .lang-btn.open .chev{ transform:rotate(180deg); color:var(--accent); }
+
+  .dd-panel{
+    position:absolute; top:calc(100% + 10px); left:0; z-index:50;
+    width:300px; max-width:86vw;
+    border-radius:18px; overflow:hidden;
+    opacity:0; transform:translateY(-8px) scale(.97); transform-origin:top center; pointer-events:none;
+    transition: opacity .28s var(--ease), transform .28s var(--ease);
+    box-shadow:0 24px 50px -16px rgba(0,0,0,0.22);
+  }
+  .dd-panel.open{ opacity:1; transform:translateY(0) scale(1); pointer-events:auto; }
+  .dd-panel.right{ left:auto; right:0; }
+  .dd-search{
+    width:100%; padding:12px 16px; font-size:14px; outline:none;
+    background:rgba(255,255,255,0.7); border:none; border-bottom:1px solid var(--border);
+    color:var(--text); transition: background-color .25s var(--ease);
+  }
+  .dd-search:focus{ background:#fff; }
+  .dd-list{ max-height:280px; overflow-y:auto; padding:8px; }
+  .dd-list::-webkit-scrollbar{ width:6px; }
+  .dd-list::-webkit-scrollbar-thumb{ background:rgba(0,0,0,0.15); border-radius:3px; }
+  .dd-item{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 12px; border-radius:10px; font-size:14px; font-weight:500; color:var(--text);
+    cursor:pointer; transition: background-color .18s var(--ease), color .18s var(--ease), transform .18s var(--ease);
+  }
+  .dd-item:hover{ background:var(--accent-soft); color:var(--accent); transform:translateX(3px); }
+  .dd-item.selected{ color:var(--accent); font-weight:600; }
+  .dd-item .native{ font-size:12px; color:var(--faint); font-weight:400; margin-left:6px; }
+  .dd-empty{ padding:20px; text-align:center; color:var(--faint); font-size:13px; }
+
+  /* ---------- Text areas ---------- */
+  .text-surface{
+    width:100%; resize:none; outline:none; border:none; background:transparent;
+    font-size:20px; line-height:1.55; color:var(--text); font-family:inherit;
+    min-height:160px; max-height:340px; overflow-y:auto;
+    transition: height .3s var(--ease);
+    scrollbar-width:thin;
+  }
+  .text-surface::placeholder{ color:var(--faint); }
+  .text-surface::-webkit-scrollbar{ width:6px; }
+  .text-surface::-webkit-scrollbar-thumb{ background:rgba(0,0,0,0.15); border-radius:3px; }
+  .panel-wrap{ position:relative; transition: box-shadow .3s var(--ease), border-color .3s var(--ease); border:1px solid transparent; border-radius:20px; }
+  .panel-wrap:focus-within{ border-color:rgba(26,115,232,0.4); box-shadow:0 0 0 4px var(--accent-soft), 0 8px 24px -10px var(--accent-glow); }
+  .output-div{
+    width:100%; min-height:160px; max-height:340px; overflow-y:auto;
+    font-size:20px; line-height:1.55; color:var(--text); white-space:pre-wrap; word-break:break-word;
+    outline:none; scrollbar-width:thin;
+  }
+  .output-div::-webkit-scrollbar{ width:6px; }
+  .output-div::-webkit-scrollbar-thumb{ background:rgba(0,0,0,0.15); border-radius:3px; }
+  .output-placeholder{ color:var(--faint); }
+
+  /* ---------- Typing cursor ---------- */
+  .typing-cursor{
+    display:inline-block; width:2px; height:1.15em; background:var(--accent);
+    vertical-align:text-bottom; margin-left:2px; border-radius:1px;
+    animation:blink 1s steps(2,start) infinite;
+    transition: opacity .4s var(--ease);
+  }
+  .typing-cursor.done{ opacity:0; animation:none; }
+  @keyframes blink{ 0%,100%{ opacity:1;} 50%{ opacity:0;} }
+
+  /* ---------- Loading dots ---------- */
+  .loading-dots{ display:inline-flex; gap:5px; align-items:center; height:24px; }
+  .loading-dots span{
+    width:7px; height:7px; border-radius:50%; background:var(--accent); opacity:.4;
+    animation:dotbounce 1.2s var(--ease) infinite;
+  }
+  .loading-dots span:nth-child(2){ animation-delay:.15s; }
+  .loading-dots span:nth-child(3){ animation-delay:.3s; }
+  @keyframes dotbounce{ 0%,60%,100%{ transform:translateY(0); opacity:.4;} 30%{ transform:translateY(-6px); opacity:1;} }
+
+  /* ---------- Toast ---------- */
+  #toast{
+    position:fixed; bottom:32px; left:50%; transform:translateX(-50%) translateY(30px);
+    padding:12px 22px; border-radius:14px; font-size:14px; font-weight:500; color:#fff;
+    background:rgba(31,31,31,0.92); backdrop-filter:blur(10px);
+    box-shadow:0 12px 30px -8px rgba(0,0,0,0.4);
+    opacity:0; pointer-events:none; z-index:100;
+    display:flex; align-items:center; gap:10px;
+    transition: opacity .35s var(--ease), transform .35s var(--ease-out);
+  }
+  #toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* ---------- Divider ---------- */
+  .v-divider{ width:1px; background:linear-gradient(to bottom, transparent, var(--border) 20%, var(--border) 80%, transparent); }
+  .h-divider{ height:1px; background:linear-gradient(to right, transparent, var(--border) 20%, var(--border) 80%, transparent); }
+
+  .counter{ font-variant-numeric:tabular-nums; transition: color .25s var(--ease); }
+  .counter.warn{ color:#ea4335; }
+
+  .badge{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:4px 12px; border-radius:999px; font-size:11px; font-weight:600; letter-spacing:.04em;
+    background:rgba(26,115,232,0.1); color:var(--accent); text-transform:uppercase;
+  }
+  .logo-mark{
+    width:38px; height:38px; border-radius:12px; display:inline-flex; align-items:center; justify-content:center;
+    background:linear-gradient(135deg,#4285f4,#34a853 50%,#fbbc04);
+    box-shadow:0 8px 20px -6px rgba(66,133,244,0.5);
+  }
+  .grad-text{
+    background:linear-gradient(120deg,#1a73e8,#9334ea 45%,#ea4335 80%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .action-row{ display:flex; align-items:center; gap:4px; }
+  .fade-mask{ -webkit-mask-image:linear-gradient(to bottom,#000 85%,transparent); mask-image:linear-gradient(to bottom,#000 85%,transparent); }
+</style>
+</head>
+<body>
+
+<div class="bg-stage" aria-hidden="true">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+  <div class="blob blob-4"></div>
+</div>
+
+<main class="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-14 min-h-screen flex flex-col justify-center">
+
+  <!-- Header -->
+  <header class="rise rise-1 flex items-center justify-between mb-8 sm:mb-10">
+    <div class="flex items-center gap-3">
+      <div class="logo-mark">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      </div>
+      <div>
+        <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight leading-none">LexiCore<span class="grad-text"> Translate</span></h1>
+        <p class="text-xs text-[var(--muted)] mt-1 font-medium">Real-time translation, beautifully crafted</p>
+      </div>
+    </div>
+    <span class="badge hidden sm:inline-flex">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      Live
+    </span>
+  </header>
+
+  <!-- Translator card -->
+  <section class="glass rise rise-2 rounded-[28px] p-4 sm:p-6">
+
+    <!-- Language bar -->
+    <div class="flex items-center justify-between gap-2 sm:gap-4 flex-wrap sm:flex-nowrap">
+      <!-- Source selector -->
+      <div class="relative flex-1 min-w-0">
+        <button id="srcLangBtn" class="lang-btn w-full sm:w-auto justify-center sm:justify-start" aria-haspopup="listbox" aria-expanded="false">
+          <span id="srcLangName" class="truncate">English</span>
+          <svg class="chev flex-shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div id="srcPanel" class="dd-panel glass-soft" role="listbox">
+          <div class="relative">
+            <svg class="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--faint)]" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input id="srcSearch" class="dd-search pl-10" type="text" placeholder="Search languages…" autocomplete="off" />
+          </div>
+          <div id="srcList" class="dd-list"></div>
+        </div>
+      </div>
+
+      <!-- Swap -->
+      <button id="swapBtn" aria-label="Swap languages" title="Swap languages">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3L4 7l4 4"/><path d="M4 7h16"/><path d="M16 21l4-4-4-4"/><path d="M20 17H4"/></svg>
+      </button>
+
+      <!-- Target selector -->
+      <div class="relative flex-1 min-w-0">
+        <button id="tgtLangBtn" class="lang-btn w-full sm:w-auto justify-center sm:justify-start" aria-haspopup="listbox" aria-expanded="false" style="margin-left:auto; display:flex;">
+          <span id="tgtLangName" class="truncate">Thai</span>
+          <svg class="chev flex-shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div id="tgtPanel" class="dd-panel glass-soft right" role="listbox">
+          <div class="relative">
+            <svg class="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--faint)]" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input id="tgtSearch" class="dd-search pl-10" type="text" placeholder="Search languages…" autocomplete="off" />
+          </div>
+          <div id="tgtList" class="dd-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="h-divider my-4 sm:my-5"></div>
+
+    <!-- Panels -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-0">
+      <!-- Source panel -->
+      <div class="flex flex-col pr-0 md:pr-6 md:border-r border-[var(--border)]">
+        <div class="panel-wrap flex-1 p-4 sm:p-5 relative">
+          <textarea id="sourceInput" class="text-surface" placeholder="Type text to translate…" maxlength="5000" spellcheck="false"></textarea>
+          <button id="clearBtn" class="btn-icon absolute top-3 right-3 opacity-0 pointer-events-none transition-opacity duration-300" aria-label="Clear text" title="Clear">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="flex items-center justify-between mt-3 px-1">
+          <span id="srcCounter" class="counter text-xs font-medium text-[var(--faint)]">0 / 5000</span>
+          <div class="action-row">
+            <button id="srcSpeakBtn" class="btn-icon" aria-label="Listen to source text" title="Listen">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+            </button>
+            <button id="srcCopyBtn" class="btn-icon" aria-label="Copy source text" title="Copy">
+              <svg class="icon-copy" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <svg class="icon-check hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34a853" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Target panel -->
+      <div class="flex flex-col pl-0 md:pl-6 mt-4 md:mt-0 pt-4 md:pt-0 border-t border-[var(--border)] md:border-t-0">
+        <div class="panel-wrap flex-1 p-4 sm:p-5 relative bg-white/30 rounded-[20px]">
+          <div id="targetOutput" class="output-div" role="textbox" aria-label="Translated text" tabindex="0">
+            <span id="typedText"></span><span id="typingCursor" class="typing-cursor done" style="display:none;"></span>
+          </div>
+          <div id="loadingState" class="hidden absolute inset-0 flex items-center justify-center gap-3 text-[var(--muted)] text-sm font-medium">
+            <span>Translating</span>
+            <span class="loading-dots"><span></span><span></span><span></span></span>
+          </div>
+          <span id="tgtPlaceholder" class="output-placeholder absolute top-4 left-4 sm:left-5 text-[20px] pointer-events-none">Translation</span>
+        </div>
+        <div class="flex items-center justify-between mt-3 px-1">
+          <span id="tgtCounter" class="counter text-xs font-medium text-[var(--faint)]">0 characters</span>
+          <div class="action-row">
+            <button id="tgtSpeakBtn" class="btn-icon" aria-label="Listen to translation" title="Listen">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+            </button>
+            <button id="tgtCopyBtn" class="btn-icon" aria-label="Copy translation" title="Copy">
+              <svg class="icon-copy" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <svg class="icon-check hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34a853" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="rise rise-3 text-center mt-6 text-xs text-[var(--faint)] font-medium">
+    Powered by MyMemory Translation API · Speech synthesis runs locally in your browser
+  </footer>
+</main>
+
+<div id="toast" role="status" aria-live="polite">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#34a853" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+  <span id="toastMsg">Copied to clipboard</span>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ================= Language data ================= */
+  var AUTO = { code:'auto', name:'Detect language', native:'Auto', bcp:'en', rtl:false };
+  var LANGS = [
+    { code:'en', name:'English',        native:'English',     bcp:'en-US', rtl:false },
+    { code:'th', name:'Thai',           native:'ไทย',          bcp:'th-TH', rtl:false },
+    { code:'ja', name:'Japanese',       native:'日本語',        bcp:'ja-JP', rtl:false },
+    { code:'ko', name:'Korean',         native:'한국어',        bcp:'ko-KR', rtl:false },
+    { code:'zh-CN', name:'Chinese (Simplified)', native:'简体中文', bcp:'zh-CN', rtl:false },
+    { code:'zh-TW', name:'Chinese (Traditional)', native:'繁體中文', bcp:'zh-TW', rtl:false },
+    { code:'es', name:'Spanish',        native:'Español',      bcp:'es-ES', rtl:false },
+    { code:'fr', name:'French',         native:'Français',     bcp:'fr-FR', rtl:false },
+    { code:'de', name:'German',         native:'Deutsch',      bcp:'de-DE', rtl:false },
+    { code:'it', name:'Italian',        native:'Italiano',     bcp:'it-IT', rtl:false },
+    { code:'pt', name:'Portuguese',     native:'Português',    bcp:'pt-PT', rtl:false },
+    { code:'ru', name:'Russian',        native:'Русский',      bcp:'ru-RU', rtl:false },
+    { code:'vi', name:'Vietnamese',     native:'Tiếng Việt',   bcp:'vi-VN', rtl:false },
+    { code:'id', name:'Indonesian',     native:'Bahasa Indonesia', bcp:'id-ID', rtl:false },
+    { code:'ms', name:'Malay',          native:'Bahasa Melayu',bcp:'ms-MY', rtl:false },
+    { code:'tl', name:'Filipino',       native:'Filipino',     bcp:'fil-PH', rtl:false },
+    { code:'ar', name:'Arabic',         native:'العربية',      bcp:'ar-SA', rtl:true  },
+    { code:'hi', name:'Hindi',          native:'हिन्दी',        bcp:'hi-IN', rtl:false },
+    { code:'bn', name:'Bengali',        native:'বাংলা',        bcp:'bn-BD', rtl:false },
+    { code:'ta', name:'Tamil',          native:'தமிழ்',        bcp:'ta-IN', rtl:false },
+    { code:'te', name:'Telugu',         native:'తెలుగు',       bcp:'te-IN', rtl:false },
+    { code:'mr', name:'Marathi',        native:'मराठी',        bcp:'mr-IN', rtl:false },
+    { code:'ur', name:'Urdu',           native:'اردو',         bcp:'ur-PK', rtl:true  },
+    { code:'fa', name:'Persian',        native:'فارسی',        bcp:'fa-IR', rtl:true  },
+    { code:'he', name:'Hebrew',         native:'עברית',        bcp:'he-IL', rtl:true  },
+    { code:'tr', name:'Turkish',        native:'Türkçe',       bcp:'tr-TR', rtl:false },
+    { code:'nl', name:'Dutch',          native:'Nederlands',   bcp:'nl-NL', rtl:false },
+    { code:'pl', name:'Polish',         native:'Polski',       bcp:'pl-PL', rtl:false },
+    { code:'sv', name:'Swedish',        native:'Svenska',      bcp:'sv-SE', rtl:false },
+    { code:'da', name:'Danish',         native:'Dansk',        bcp:'da-DK', rtl:false },
+    { code:'fi', name:'Finnish',        native:'Suomi',        bcp:'fi-FI', rtl:false },
+    { code:'no', name:'Norwegian',      native:'Norsk',        bcp:'nb-NO', rtl:false },
+    { code:'el', name:'Greek',          native:'Ελληνικά',     bcp:'el-GR', rtl:false },
+    { code:'cs', name:'Czech',          native:'Čeština',      bcp:'cs-CZ', rtl:false },
+    { code:'hu', name:'Hungarian',      native:'Magyar',       bcp:'hu-HU', rtl:false },
+    { code:'ro', name:'Romanian',       native:'Română',       bcp:'ro-RO', rtl:false },
+    { code:'uk', name:'Ukrainian',      native:'Українська',   bcp:'uk-UA', rtl:false },
+    { code:'sw', name:'Swahili',        native:'Kiswahili',    bcp:'sw-KE', rtl:false }
+  ];
+
+  /* ================= State ================= */
+  var state = {
+    src: LANGS[0],   // English
+    tgt: LANGS[1],   // Thai
+    typingTimer: null,
+    debounceTimer: null,
+    abortCtrl: null,
+    toastTimer: null,
+    speaking: { src:false, tgt:false },
+    currentUtter: null
+  };
+
+  /* ================= DOM refs ================= */
+  var $ = function(id){ return document.getElementById(id); };
+  var sourceInput = $('sourceInput');
+  var targetOutput = $('targetOutput');
+  var typedText = $('typedText');
+  var typingCursor = $('typingCursor');
+  var tgtPlaceholder = $('tgtPlaceholder');
+  var loadingState = $('loadingState');
+  var srcCounter = $('srcCounter');
+  var tgtCounter = $('tgtCounter');
+  var clearBtn = $('clearBtn');
+  var swapBtn = $('swapBtn');
+  var srcLangBtn = $('srcLangBtn'), tgtLangBtn = $('tgtLangBtn');
+  var srcLangName = $('srcLangName'), tgtLangName = $('tgtLangName');
+  var srcPanel = $('srcPanel'), tgtPanel = $('tgtPanel');
+  var srcSearch = $('srcSearch'), tgtSearch = $('tgtSearch');
+  var srcList = $('srcList'), tgtList = $('tgtList');
+  var toast = $('toast'), toastMsg = $('toastMsg');
+
+  /* ================= Helpers ================= */
+  function showToast(msg){
+    toastMsg.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(state.toastTimer);
+    state.toastTimer = setTimeout(function(){ toast.classList.remove('show'); }, 2200);
+  }
+
+  function findLang(code){
+    for(var i=0;i<LANGS.length;i++){ if(LANGS[i].code===code) return LANGS[i]; }
+    return null;
+  }
+
+  /* ================= Ripple effect ================= */
+  function addRipple(e){
+    var btn = e.currentTarget;
+    var rect = btn.getBoundingClientRect();
+    var size = Math.max(rect.width, rect.height);
+    var span = document.createElement('span');
+    span.className = 'ripple-span';
+    span.style.width = span.style.height = size+'px';
+    span.style.left = (e.clientX - rect.left - size/2)+'px';
+    span.style.top = (e.clientY - rect.top - size/2)+'px';
+    btn.appendChild(span);
+    setTimeout(function(){ span.remove(); }, 650);
+  }
+  [swapBtn, $('srcSpeakBtn'), $('tgtSpeakBtn'), $('srcCopyBtn'), $('tgtCopyBtn'), clearBtn].forEach(function(b){
+    if(b) b.addEventListener('click', addRipple);
+  });
+
+  /* ================= Dropdowns ================= */
+  function renderList(container, langs, selectedCode, includeAuto, onSelect){
+    container.innerHTML = '';
+    var frag = document.createDocumentFragment();
+    var list = includeAuto ? [AUTO].concat(langs) : langs;
+    if(list.length===0){
+      var empty = document.createElement('div');
+      empty.className = 'dd-empty';
+      empty.textContent = 'No languages found';
+      frag.appendChild(empty);
+    }
+    list.forEach(function(l){
+      var item = document.createElement('div');
+      item.className = 'dd-item' + (l.code===selectedCode ? ' selected' : '');
+      item.setAttribute('role','option');
+      item.setAttribute('data-code', l.code);
+      var left = document.createElement('span');
+      left.textContent = l.name;
+      var native = document.createElement('span');
+      native.className = 'native';
+      native.textContent = l.native;
+      left.appendChild(native);
+      item.appendChild(left);
+      if(l.code===selectedCode){
+        var check = document.createElementNS('http://www.w3.org/2000/svg','svg');
+        check.setAttribute('width','15'); check.setAttribute('height','15');
+        check.setAttribute('viewBox','0 0 24 24'); check.setAttribute('fill','none');
+        check.setAttribute('stroke','currentColor'); check.setAttribute('stroke-width','2.5');
+        check.setAttribute('stroke-linecap','round'); check.setAttribute('stroke-linejoin','round');
+        check.innerHTML = '<polyline points="20 6 9 17 4 12"/>';
+        item.appendChild(check);
+      }
+      item.addEventListener('click', function(e){ e.stopPropagation(); onSelect(l); });
+      frag.appendChild(item);
+    });
+    container.appendChild(frag);
+  }
+
+  function openPanel(which){
+    closePanels();
+    var panel = which==='src' ? srcPanel : tgtPanel;
+    var btn = which==='src' ? srcLangBtn : tgtLangBtn;
+    var search = which==='src' ? srcSearch : tgtSearch;
+    panel.classList.add('open');
+    btn.classList.add('open');
+    btn.setAttribute('aria-expanded','true');
+    setTimeout(function(){ search.focus(); }, 120);
+  }
+  function closePanels(){
+    srcPanel.classList.remove('open'); tgtPanel.classList.remove('open');
+    srcLangBtn.classList.remove('open'); tgtLangBtn.classList.remove('open');
+    srcLangBtn.setAttribute('aria-expanded','false');
+    tgtLangBtn.setAttribute('aria-expanded','false');
+    srcSearch.value=''; tgtSearch.value='';
+    refreshLists();
+  }
+  function refreshLists(){
+    var sq = srcSearch.value.trim().toLowerCase();
+    var tq = tgtSearch.value.trim().toLowerCase();
+    var sFiltered = sq ? LANGS.filter(function(l){ return l.name.toLowerCase().indexOf(sq)>-1 || l.native.toLowerCase().indexOf(sq)>-1 || l.code.indexOf(sq)>-1; }) : LANGS;
+    var tFiltered = tq ? LANGS.filter(function(l){ return l.name.toLowerCase().indexOf(tq)>-1 || l.native.toLowerCase().indexOf(tq)>-1 || l.code.indexOf(tq)>-1; }) : LANGS;
+    renderList(srcList, sFiltered, state.src.code, true, function(l){ selectLang('src', l); });
+    renderList(tgtList, tFiltered, state.tgt.code, false, function(l){ selectLang('tgt', l); });
+  }
+
+  srcLangBtn.addEventListener('click', function(e){ e.stopPropagation(); openPanel('src'); });
+  tgtLangBtn.addEventListener('click', function(e){ e.stopPropagation(); openPanel('tgt'); });
+  srcPanel.addEventListener('click', function(e){ e.stopPropagation(); });
+  tgtPanel.addEventListener('click', function(e){ e.stopPropagation(); });
+  srcSearch.addEventListener('input', refreshLists);
+  tgtSearch.addEventListener('input', refreshLists);
+  document.addEventListener('click', closePanels);
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape') closePanels(); });
+
+  function selectLang(which, l){
+    if(which==='src'){
+      if(l.code===state.tgt.code){ /* swap them to avoid identical pair */
+        state.tgt = state.src;
+      }
+      state.src = l;
+      srcLangName.textContent = l.name;
+    } else {
+      if(l.code===state.src.code){
+        state.src = state.tgt;
+        srcLangName.textContent = state.src.name;
+      }
+      state.tgt = l;
+      tgtLangName.textContent = l.name;
+    }
+    updateSwapDisabled();
+    applyRtl();
+    closePanels();
+    triggerTranslate();
+  }
+
+  function updateSwapDisabled(){
+    swapBtn.disabled = (state.src.code==='auto');
+  }
+
+  function applyRtl(){
+    if(state.tgt.rtl){
+      targetOutput.setAttribute('dir','rtl');
+      targetOutput.style.textAlign = 'right';
+    } else {
+      targetOutput.setAttribute('dir','ltr');
+      targetOutput.style.textAlign = 'left';
+    }
+  }
+
+  /* ================= Swap ================= */
+  swapBtn.addEventListener('click', function(){
+    if(swapBtn.disabled){ showToast('Detected language cannot be swapped'); return; }
+    swapBtn.classList.remove('spinning');
+    void swapBtn.offsetWidth; /* reflow to restart animation */
+    swapBtn.classList.add('spinning');
+    setTimeout(function(){ swapBtn.classList.remove('spinning'); }, 720);
+
+    var tmp = state.src; state.src = state.tgt; state.tgt = tmp;
+    srcLangName.textContent = state.src.name;
+    tgtLangName.textContent = state.tgt.name;
+
+    var srcVal = sourceInput.value;
+    var tgtVal = typedText.textContent;
+    sourceInput.value = tgtVal;
+    autoResize(sourceInput);
+    updateCounters();
+    applyRtl();
+    updateSwapDisabled();
+    if(tgtVal){ triggerTranslate(); }
+    else { clearTarget(); showToast('Languages swapped'); }
+  });
+
+  /* ================= Textarea auto-resize & counters ================= */
+  function autoResize(el){
+    el.style.height = 'auto';
+    var h = Math.max(160, Math.min(340, el.scrollHeight));
+    el.style.height = h + 'px';
+  }
+  function updateCounters(){
+    var len = sourceInput.value.length;
+    srcCounter.textContent = len + ' / 5000';
+    srcCounter.classList.toggle('warn', len > 4800);
+    var tlen = typedText.textContent.length;
+    tgtCounter.textContent = tlen + (tlen===1?' character':' characters');
+    clearBtn.style.opacity = len>0 ? '1' : '0';
+    clearBtn.style.pointerEvents = len>0 ? 'auto' : 'none';
+  }
+  sourceInput.addEventListener('input', function(){
+    autoResize(sourceInput);
+    updateCounters();
+    clearTimeout(state.debounceTimer);
+    state.debounceTimer = setTimeout(triggerTranslate, 550);
+  });
+
+  /* ================= Clear ================= */
+  clearBtn.addEventListener('click', function(){
+    sourceInput.value='';
+    autoResize(sourceInput);
+    updateCounters();
+    clearTarget();
+    sourceInput.focus();
+    if(state.abortCtrl) state.abortCtrl.abort();
+    showToast('Cleared');
+  });
+
+  function clearTarget(){
+    stopTyping();
+    typedText.textContent='';
+    typingCursor.style.display='none';
+    typingCursor.classList.add('done');
+    tgtPlaceholder.style.display='';
+    loadingState.classList.add('hidden');
+    updateCounters();
+  }
+
+  /* ================= Copy ================= */
+  function copyText(text, btn){
+    if(!text){ showToast('Nothing to copy'); return; }
+    var done = function(){
+      showToast('Copied to clipboard');
+      var copyIcon = btn.querySelector('.icon-copy');
+      var checkIcon = btn.querySelector('.icon-check');
+      if(copyIcon && checkIcon){
+        copyIcon.classList.add('hidden'); checkIcon.classList.remove('hidden');
+        setTimeout(function(){ copyIcon.classList.remove('hidden'); checkIcon.classList.add('hidden'); }, 1600);
+      }
+    };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done).catch(function(){ fallbackCopy(text, done); });
+    } else { fallbackCopy(text, done); }
+  }
+  function fallbackCopy(text, done){
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); done(); }catch(e){ showToast('Copy failed'); }
+    ta.remove();
+  }
+  $('srcCopyBtn').addEventListener('click', function(){ copyText(sourceInput.value, this); });
+  $('tgtCopyBtn').addEventListener('click', function(){ copyText(typedText.textContent, this); });
+
+  /* ================= Text-to-Speech ================= */
+  function speak(text, lang, btn, which){
+    if(!('speechSynthesis' in window)){ showToast('Speech not supported in this browser'); return; }
+    if(!text){ showToast('Nothing to speak'); return; }
+    if(state.speaking[which]){
+      window.speechSynthesis.cancel();
+      state.speaking[which]=false;
+      btn.classList.remove('speaking');
+      return;
+    }
+    window.speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(text);
+    u.lang = lang.bcp;
+    u.rate = 1; u.pitch = 1;
+    var voices = window.speechSynthesis.getVoices();
+    var base = lang.code.split('-')[0];
+    var voice = voices.find(function(v){ return v.lang.toLowerCase()===lang.bcp.toLowerCase(); })
+             || voices.find(function(v){ return v.lang.toLowerCase().indexOf(base.toLowerCase())===0; });
+    if(voice) u.voice = voice;
+    state.speaking[which]=true;
+    btn.classList.add('speaking');
+    u.onend = u.onerror = function(){ state.speaking[which]=false; btn.classList.remove('speaking'); };
+    state.currentUtter = u;
+    window.speechSynthesis.speak(u);
+  }
+  if('speechSynthesis' in window){ window.speechSynthesis.onvoiceschanged = function(){}; }
+  $('srcSpeakBtn').addEventListener('click', function(){ speak(sourceInput.value, state.src, this, 'src'); });
+  $('tgtSpeakBtn').addEventListener('click', function(){ speak(typedText.textContent, state.tgt, this, 'tgt'); });
+
+  /* ================= Typing effect ================= */
+  function stopTyping(){
+    if(state.typingTimer){ clearInterval(state.typingTimer); state.typingTimer=null; }
+  }
+  function typeText(fullText){
+    stopTyping();
+    typedText.textContent = '';
+    tgtPlaceholder.style.display = 'none';
+    typingCursor.style.display = 'inline-block';
+    typingCursor.classList.remove('done');
+    var i = 0;
+    var len = fullText.length;
+    state.typingTimer = setInterval(function(){
+      if(i >= len){
+        stopTyping();
+        typingCursor.classList.add('done');
+        setTimeout(function(){ typingCursor.style.display='none'; }, 450);
+        updateCounters();
+        return;
+      }
+      /* type 1–2 chars per tick; pause longer after sentence punctuation */
+      var step = /[.!?。！？]/.test(fullText[i]) ? 1 : (Math.random()<0.35 ? 2 : 1);
+      typedText.textContent += fullText.slice(i, i+step);
+      i += step;
+      targetOutput.scrollTop = targetOutput.scrollHeight;
+      updateCounters();
+    }, 22);
+  }
+
+  /* ================= Translation (MyMemory + mock fallback) ================= */
+  function triggerTranslate(){
+    var text = sourceInput.value.trim();
+    if(!text){ clearTarget(); return; }
+    stopTyping();
+    if(state.abortCtrl) state.abortCtrl.abort();
+    state.abortCtrl = new AbortController();
+    loadingState.classList.remove('hidden');
+    tgtPlaceholder.style.display='none';
+    typedText.textContent='';
+    typingCursor.style.display='none';
+
+    var srcCode = state.src.code==='auto' ? 'Autodetect' : state.src.code;
+    var url = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text)
+            + '&langpair=' + encodeURIComponent(srcCode + '|' + state.tgt.code) + '&mt=1';
+
+    fetch(url, { signal: state.abortCtrl.signal })
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        loadingState.classList.add('hidden');
+        var translated = data && data.responseData && data.responseData.translatedText;
+        if(translated && data.responseStatus === 200){
+          typeText(translated);
+        } else {
+          mockTranslate(text);
+        }
+      })
+      .catch(function(err){
+        if(err.name==='AbortError') return;
+        loadingState.classList.add('hidden');
+        mockTranslate(text);
+      });
+  }
+
+  /* Smart mock fallback: small built-in dictionary + honest offline notice */
+  var MOCK_DICT = {
+    en:{ es:{hello:'hola',world:'mundo',thank:'gracias',you:'tú',good:'bueno',morning:'mañana',night:'noche',love:'amor',friend:'amigo',water:'agua',food:'comida',house:'casa',cat:'gato',dog:'perro',book:'libro',day:'día',man:'hombre',woman:'mujer',child:'niño',time:'tiempo'},
+         fr:{hello:'bonjour',world:'monde',thank:'merci',you:'vous',good:'bon',morning:'matin',night:'nuit',love:'amour',friend:'ami',water:'eau',food:'nourriture',house:'maison',cat:'chat',dog:'chien',book:'livre',day:'jour',man:'homme',woman:'femme',child:'enfant',time:'temps'},
+         de:{hello:'hallo',world:'welt',thank:'danke',you:'du',good:'gut',morning:'morgen',night:'nacht',love:'liebe',friend:'freund',water:'wasser',food:'essen',house:'haus',cat:'katze',dog:'hund',book:'buch',day:'tag',man:'mann',woman:'frau',child:'kind',time:'zeit'} }
+  };
+  function mockTranslate(text){
+    showToast('Offline mode — showing mock translation');
+    var dict = (MOCK_DICT.en && MOCK_DICT.en[state.tgt.code]) || null;
+    if(dict){
+      var out = text.split(/(\s+)/).map(function(tok){
+        if(/^\s+$/.test(tok)) return tok;
+        var clean = tok.replace(/[^a-zA-Z']/g,'').toLowerCase();
+        if(dict[clean]){
+          var punct = tok.replace(/[a-zA-Z']/g,'');
+          return dict[clean] + punct;
+        }
+        return tok;
+      }).join('');
+      typeText(out);
+    } else {
+      typeText('[mock · ' + state.tgt.name + '] ' + text);
+    }
+  }
+
+  /* ================= Toast icon color fix ================= */
+  function setToastColor(ok){
+    var ic = toast.querySelector('svg');
+    if(ic) ic.setAttribute('stroke', ok ? '#34a853' : '#fbbc04');
+  }
+
+  /* ================= Init ================= */
+  function init(){
+    refreshLists();
+    autoResize(sourceInput);
+    updateCounters();
+    applyRtl();
+    updateSwapDisabled();
+    /* preload voices */
+    if('speechSynthesis' in window){ window.speechSynthesis.getVoices(); }
+  }
+  init();
+})();
+</script>
+</body>
+</html>
